@@ -7,6 +7,7 @@ export type HooksBarba =
   | 'ready'
   | 'page'
   | 'reset'
+  | 'stateChange'
   | 'currentAdded'
   | 'currentRemoved'
   | 'nextAdded'

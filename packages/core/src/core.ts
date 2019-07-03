@@ -351,14 +351,14 @@ export class Core {
     const page = this.cache.has(href)
       ? this.cache.update(href, { action: 'click' }).request
       : this.cache.set(
+        href,
+        this.request(
           href,
-          this.request(
-            href,
-            this.timeout,
-            this.onRequestError.bind(this, trigger)
-          ),
-          'click'
-        ).request;
+          this.timeout,
+          this.onRequestError.bind(this, trigger)
+        ),
+        'click'
+      ).request;
 
     // Need to wait before getting the right transition
     if (this.transitions.shouldWait) {
@@ -530,7 +530,12 @@ export class Core {
    * Go for a Barba transition.
    */
   private _onStateChange(): void {
-    this.go(this.url.getHref(), 'popstate');
+    const should = { change: true };
+    this.hooks.do('stateChange', should);
+
+    if (should.change) {
+      this.go(this.url.getHref(), 'popstate');
+    }
   }
 
   /**
