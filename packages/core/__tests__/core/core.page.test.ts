@@ -3,16 +3,18 @@ import xhrMock from 'xhr-mock';
 import { init } from '../../__mocks__/barba';
 import barba from '../../src';
 import { hooks } from '../../src/hooks';
+import { Logger } from '../../src/modules/Logger';
 import { schemaAttribute } from '../../src/schemas/attribute';
+
+// Silence is gold… :)
+Logger.setLevel('off');
 
 // Needed for "request" module
 (global as any).Headers = class {};
 
 const namespace = 'next';
 const checkDoc = new RegExp(
-  `^<html>[\\s\\S]+body[\\s\\S]+${schemaAttribute.wrapper}[\\s\\S]+${
-    schemaAttribute.container
-  }[\\s\\S]+${namespace}[\\s\\S]+</html>$`
+  `^<html>[\\s\\S]+body[\\s\\S]+${schemaAttribute.wrapper}[\\s\\S]+${schemaAttribute.container}[\\s\\S]+${namespace}[\\s\\S]+</html>$`
 );
 const t = { leave() {}, enter() {} };
 const sameUrl = 'http://localhost/';
@@ -74,7 +76,7 @@ afterEach(() => {
 });
 
 it('do page', async () => {
-  barba.history.push = jest.fn();
+  barba.history.update = jest.fn();
   hooks.do = jest.fn();
 
   barba.transitions.store.add('transition', t);
@@ -87,7 +89,7 @@ it('do page', async () => {
 
   expect(spyCacheHas).toHaveBeenCalledTimes(1);
   expect(spyCacheSet).toHaveBeenCalledTimes(1);
-  expect(barba.history.push).toHaveBeenCalledTimes(1);
+  expect(barba.history.update).toHaveBeenCalledTimes(1);
   expect(hooks.do).toHaveBeenNthCalledWith(1, 'page', data);
   expect(hooks.do).toHaveBeenNthCalledWith(2, 'before', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(3, 'beforeLeave', data, t);
@@ -97,21 +99,11 @@ it('do page', async () => {
   expect(hooks.do).toHaveBeenNthCalledWith(7, 'beforeEnter', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(8, 'enter', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(9, 'afterEnter', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(10, 'after', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(11, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(10, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(11, 'after', data, t);
   expect(barba.transitions.doPage).toHaveBeenCalledTimes(1);
   expect(document.title).toBe('New page');
 });
-
-// it('do page [popstate]', async () => {
-//   barba.transitions.doPage = jest.fn();
-//   barba.history.add = jest.fn();
-
-//   barba.transitions.store.add('transition', { leave() {}, enter() {} });
-//   await barba.page(nextUrl, 'popstate', false);
-
-//   expect(barba.history.add).toHaveBeenCalledTimes(1);
-// });
 
 it('do page [has cache]', async () => {
   barba.history.add = jest.fn();
@@ -143,29 +135,11 @@ it('do page [waiting]', async () => {
   expect(barba.data.next.html).toMatch(checkDoc);
 });
 
-it('force when manager running', async () => {
-  barba.force = jest.fn();
-  hooks.do = jest.fn();
-
-  barba.transitions.store.add('transition', { leave() {}, enter() {} });
-  barba.transitions['_running'] = true;
-  await barba.page(nextUrl, 'barba', false);
-
-  expect(barba.force).toHaveBeenCalledTimes(1);
-  expect(hooks.do).not.toHaveBeenCalled();
-  expect(barba.transitions.doPage).not.toHaveBeenCalled();
-
-  barba.transitions['_running'] = false;
-});
-
-it('catches error', async () => {
+it('force on error', async () => {
   expect.assertions(2);
-  barba.logger.error = jest.fn();
+  barba.force = jest.fn();
   barba.transitions.logger.error = jest.fn();
-  barba.history.cancel = jest.fn();
-  spyPage.mockRestore();
   const errorLeave = new Error('Transition error [page][leave]');
-  const errorTransition = new Error('Transition error');
 
   barba.transitions.store.add('transition', {
     leave() {
@@ -176,6 +150,5 @@ it('catches error', async () => {
   await barba.page(nextUrl, 'barba', false);
 
   expect(barba.transitions.logger.error).toHaveBeenCalledWith(errorLeave);
-  expect(barba.logger.error).toHaveBeenCalledWith(errorTransition);
-  // expect(spyCacheGetAction).toHaveBeenCalledTimes(1);
+  expect(barba.force).toHaveBeenCalledTimes(1);
 });

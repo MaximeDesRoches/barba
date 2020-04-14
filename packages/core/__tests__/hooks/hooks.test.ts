@@ -34,7 +34,7 @@ it('register hooks', () => {
   expect(v1.fn).toBe(fn);
   expect(v1.ctx).toBe(ctx);
   expect(v2.fn).toBe(fn2);
-  expect(v2.ctx).toBe(null);
+  expect(v2.ctx).toMatchObject({});
 });
 
 it('do nothing when no hooks', async () => {
@@ -98,4 +98,21 @@ it('print help', () => {
   hooks.help();
 
   expect(hooks.logger.info).toHaveBeenCalledTimes(2);
+});
+
+it('catch error', async () => {
+  expect.assertions(2);
+  hooks.logger.debug = jest.fn();
+  hooks.logger.error = jest.fn();
+
+  const err = new Error('Test error');
+
+  hooks.init();
+  hooks[hookName](() => {
+    throw err;
+  });
+  await hooks.do(hookName);
+
+  expect(hooks.logger.debug).toHaveBeenCalledWith(`Hook error [${hookName}]`);
+  expect(hooks.logger.error).toHaveBeenCalledWith(err);
 });

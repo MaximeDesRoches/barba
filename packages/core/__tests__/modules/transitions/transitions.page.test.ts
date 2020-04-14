@@ -1,5 +1,6 @@
 /* tslint:disable:no-empty */
 import { init } from '../../../__mocks__/barba';
+import barba from '../../../src';
 import { ISchemaPage, ITransitionData } from '../../../src/defs';
 import { hooks } from '../../../src/hooks';
 import { Logger } from '../../../src/modules/Logger';
@@ -18,8 +19,6 @@ const afterLeave = jest.fn();
 const beforeEnter = jest.fn();
 const enter = jest.fn();
 const afterEnter = jest.fn();
-const leaveCanceled = jest.fn();
-const enterCanceled = jest.fn();
 
 hooks.do = jest.fn();
 
@@ -165,8 +164,8 @@ it('calls hooks (sync: false)', async () => {
   expect(hooks.do).toHaveBeenNthCalledWith(6, 'beforeEnter', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(7, 'enter', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(8, 'afterEnter', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(9, 'after', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(10, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(9, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(10, 'after', data, t);
 });
 
 it('calls hooks (sync: true)', async () => {
@@ -194,17 +193,17 @@ it('calls hooks (sync: true)', async () => {
   expect(hooks.do).toHaveBeenNthCalledWith(6, 'enter', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(7, 'afterLeave', data, t);
   expect(hooks.do).toHaveBeenNthCalledWith(8, 'afterEnter', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(9, 'after', data, t);
-  expect(hooks.do).toHaveBeenNthCalledWith(10, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(9, 'currentRemoved', data);
+  expect(hooks.do).toHaveBeenNthCalledWith(10, 'after', data, t);
 });
 
 it('catches error (leave, sync: false)', async () => {
-  expect.assertions(2);
+  expect.assertions(4);
 
   const leaveError = () => {
     throw new Error('test');
   };
-  const t = { leave: leaveError, leaveCanceled };
+  const t = { leave: leaveError };
 
   try {
     await transitions.doPage({
@@ -214,13 +213,15 @@ it('catches error (leave, sync: false)', async () => {
       wrapper,
     });
   } catch (e) {
-    expect(e).toEqual(new Error('Transition error'));
+    expect(e.name).toEqual('BarbaError');
+    expect(e.label).toEqual('Transition error [before/after/leave]');
+    expect(e.error).toEqual(new Error('test'));
     expect(transitions.isRunning).toBeFalsy();
   }
 });
 
 it('catches error (enter, sync: false)', async () => {
-  expect.assertions(2);
+  expect.assertions(4);
 
   const enterError = () => {
     throw new Error('test');
@@ -230,7 +231,6 @@ it('catches error (enter, sync: false)', async () => {
       return Promise.resolve('foo');
     },
     enter: enterError,
-    enterCanceled,
   };
 
   try {
@@ -241,18 +241,20 @@ it('catches error (enter, sync: false)', async () => {
       wrapper,
     });
   } catch (e) {
-    expect(e).toEqual(new Error('Transition error'));
+    expect(e.name).toEqual('BarbaError');
+    expect(e.label).toEqual('Transition error [before/after/enter]');
+    expect(e.error).toEqual(new Error('test'));
     expect(transitions.isRunning).toBeFalsy();
   }
 });
 
 it('catches error (leave, sync: true)', async () => {
-  expect.assertions(1);
+  expect.assertions(3);
 
   const leaveError = () => {
     throw new Error('test');
   };
-  const t = { sync: true, leave: leaveError, leaveCanceled, enter() {} };
+  const t = { sync: true, leave: leaveError, enter() {} };
 
   try {
     await transitions.doPage({
@@ -262,17 +264,19 @@ it('catches error (leave, sync: true)', async () => {
       wrapper,
     });
   } catch (e) {
-    expect(e).toEqual(new Error('Transition error'));
+    expect(e.name).toEqual('BarbaError');
+    expect(e.label).toEqual('Transition error [sync]');
+    expect(e.error).toEqual(new Error('test'));
   }
 });
 
 it('catches error (enter, sync: true)', async () => {
-  expect.assertions(1);
+  expect.assertions(3);
 
   const enterError = () => {
     throw new Error('test');
   };
-  const t = { sync: true, leave() {}, enter: enterError, enterCanceled };
+  const t = { sync: true, leave() {}, enter: enterError };
 
   try {
     await transitions.doPage({
@@ -282,6 +286,89 @@ it('catches error (enter, sync: true)', async () => {
       wrapper,
     });
   } catch (e) {
-    expect(e).toEqual(new Error('Transition error'));
+    expect(e.name).toEqual('BarbaError');
+    expect(e.label).toEqual('Transition error [sync]');
+    expect(e.error).toEqual(new Error('test'));
+  }
+});
+
+it('catches "global" error (before)', async () => {
+  expect.assertions(2);
+
+  const err = new Error('Test');
+  const beforeError = () => {
+    throw err;
+  };
+  const t = { sync: true, leave() {}, enter() {}, before: beforeError };
+
+  try {
+    await transitions.doPage({
+      data,
+      page,
+      transition: t,
+      wrapper,
+    });
+  } catch (e) {
+    expect(e.name).toEqual('Error');
+    expect(e).toEqual(err);
+  }
+});
+
+it('ignores "non transition" errors', async () => {
+  expect.assertions(3);
+  const tError = new Error('Weird transition error');
+
+  const leaveError1 = () => {
+    throw new Error('Timeout error');
+  };
+  const leaveError2 = () => {
+    throw new Error('Fetch error');
+  };
+  const enterError3 = () => {
+    const err = new Error('Request error');
+
+    delete err.message;
+    (err as any).status = 500;
+    throw err;
+  };
+  const leaveError4 = () => {
+    delete tError.message;
+    throw tError;
+  };
+  const t1 = { sync: true, leave: leaveError1, enter() {} };
+  const t2 = { leave: leaveError2, enter() {} };
+  const t3 = { leave() {}, enter: enterError3 };
+  const t4 = { leave: leaveError4, enter() {} };
+
+  await transitions.doPage({
+    data,
+    page,
+    transition: t1,
+    wrapper,
+  });
+  await transitions.doPage({
+    data,
+    page,
+    transition: t2,
+    wrapper,
+  });
+  await transitions.doPage({
+    data,
+    page,
+    transition: t3,
+    wrapper,
+  });
+
+  try {
+    await transitions.doPage({
+      data,
+      page,
+      transition: t4,
+      wrapper,
+    });
+  } catch (e) {
+    expect(e.name).toEqual('BarbaError');
+    expect(e.label).toEqual('Transition error [before/after/leave]');
+    expect(e.error).toEqual(tError);
   }
 });

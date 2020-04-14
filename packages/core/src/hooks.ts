@@ -17,19 +17,19 @@
 
 /***/
 
-// Third-party
-import runAsync from 'run-async';
 // Definitions
-import { HooksAll } from './defs';
+import { HookFunction, HookMethods, HooksAll } from './defs';
 // Modules
 import { Logger } from './modules/Logger';
+// Utils
+import { runAsync } from './utils';
 // Types
-interface IHookData {
+interface IHookInfos {
   ctx: any;
-  fn: () => Promise<void>;
+  fn: HookFunction;
 }
 
-export class Hooks {
+export class Hooks extends HookMethods {
   /**
    * Allow the use of `hooks[name](cb, ctx)`.
    */
@@ -50,19 +50,16 @@ export class Hooks {
     'currentRemoved',
     'nextAdded',
     'nextRemoved',
-    'beforeAppear',
-    'appear',
-    'afterAppear',
-    'appearCanceled',
+    'beforeOnce',
+    'once',
+    'afterOnce',
     'before',
     'beforeLeave',
     'leave',
     'afterLeave',
-    'leaveCanceled',
     'beforeEnter',
     'enter',
     'afterEnter',
-    'enterCanceled',
     'after',
   ];
   /**
@@ -71,9 +68,10 @@ export class Hooks {
    * - Unique hook name
    * - Associated data set(s) (callback + context)
    */
-  public registered: Map<HooksAll, Set<IHookData>> = new Map();
+  public registered: Map<HooksAll, Set<IHookInfos>> = new Map();
 
   constructor() {
+    super();
     this.init();
   }
 
@@ -81,14 +79,14 @@ export class Hooks {
     this.registered.clear();
     this.all.forEach(hook => {
       if (!this[hook]) {
-        this[hook] = (fn: () => Promise<void>, ctx: any = null) => {
+        this[hook] = (fn: HookFunction, ctx?: any) => {
           if (!this.registered.has(hook)) {
             this.registered.set(hook, new Set());
           }
           const set = this.registered.get(hook);
 
           set.add({
-            ctx,
+            ctx: ctx || {},
             fn,
           });
         };
@@ -107,13 +105,14 @@ export class Hooks {
       let chain = Promise.resolve();
 
       this.registered.get(name).forEach(hook => {
-        // If needed, bind the right context
-        const fn = hook.ctx ? hook.fn.bind(hook.ctx) : hook.fn;
         // Chain async hooks promisified
-        chain = chain.then(() => runAsync(fn)(...args));
+        chain = chain.then(() => runAsync(hook.fn, hook.ctx)(...args));
       });
 
-      return chain;
+      return chain.catch(error => {
+        this.logger.debug(`Hook error [${name}]`);
+        this.logger.error(error);
+      });
     }
 
     return Promise.resolve();

@@ -20,8 +20,8 @@ import {
   IBarbaPlugin,
   IgnoreOption,
   ISchemaPage,
-  ITransitionAppear,
   ITransitionData,
+  ITransitionOnce,
   ITransitionPage,
   Link,
   LinkEvent,
@@ -74,6 +74,7 @@ export class Core {
   public timeout: number;
   public cacheIgnore: IgnoreOption;
   public prefetchIgnore: IgnoreOption;
+  public preventRunning: boolean;
   /**
    * Hooks
    */
@@ -133,10 +134,12 @@ export class Core {
    *
    * - transitions: `[]`
    * - views: `[]`
+   * - schema: [[SchemaAttribute]]
    * - timeout: `2e3`
    * - cacheIgnore: `false`
    * - prefetchIgnore: `false`
-   * - schema: [[SchemaAttribute]]
+   * - preventRunning: `false`
+   * - prevent: `null`,
    * - debug: `false`
    * - logLevel: `'debug'`
    */
@@ -144,24 +147,27 @@ export class Core {
     /** @ignore */ {
       transitions = [],
       views = [],
-      prevent: preventCustom = null,
-      timeout = 2e3,
+      schema = schemaAttribute,
       requestError,
+      timeout = 2e3,
       cacheIgnore = false,
       prefetchIgnore = false,
-      schema = schemaAttribute,
+      /* istanbul ignore next */
+      preventRunning = false,
+      prevent: preventCustom = null,
       debug = false,
       logLevel = 'off',
     }: IBarbaOptions = {}
   ) {
     // 0. Set logger level and print version
     Logger.setLevel(debug === true ? 'debug' : logLevel);
-    this.logger.print(this.version);
+    this.logger.info(this.version);
 
     // 1. Manage options
     Object.keys(schema).forEach(k => {
       const attr = k as SchemaAttributeValues;
 
+      /* istanbul ignore else */
       if (schemaAttribute[attr]) {
         schemaAttribute[attr] = schema[attr];
       }
@@ -170,6 +176,7 @@ export class Core {
     this.timeout = timeout;
     this.cacheIgnore = cacheIgnore;
     this.prefetchIgnore = prefetchIgnore;
+    this.preventRunning = preventRunning;
 
     // 2. Get and check wrapper
     this._wrapper = this.dom.getWrapper();
@@ -203,8 +210,8 @@ export class Core {
     }
 
     // 5. Use "current" data
-    // Set/update history
-    this.history.add(current.url.href, current.namespace);
+    // Init history
+    this.history.init(current.url.href, current.namespace);
     // Add to cache
     // TODO: do not cache renderer HTML, only request results…
     // this.cache.set(current.url.href, Promise.resolve(current.html), 'init');
@@ -219,15 +226,17 @@ export class Core {
     this.plugins.forEach(plugin => plugin.init());
 
     // 8. Barba ready
-    // Set next + trigger for appear and `beforeEnter` view on page load.
-    const readyData = this.data;
+    // Set next + trigger for once and `beforeEnter`/`afterEnter` view on page load.
+    const onceData = this.data;
 
-    readyData.trigger = 'barba';
-    readyData.next = readyData.current;
-    this.hooks.do('ready', readyData);
+    onceData.trigger = 'barba';
+    onceData.next = onceData.current;
+    onceData.current = { ...this.schemaPage };
+    this.hooks.do('ready', onceData);
 
-    // 9. Finally, do appear…
-    this.appear();
+    // 9. Finally, do once…
+    this.once(onceData);
+
     // Clean data for first barba transition…
     this._resetData();
   }
@@ -235,6 +244,7 @@ export class Core {
   public destroy(): void {
     this._resetData();
     this._unbind();
+    this.history.clear();
     this.hooks.clear();
     this.plugins = [];
   }
@@ -272,9 +282,18 @@ export class Core {
     trigger: Trigger = 'barba',
     e?: LinkEvent | PopStateEvent
   ): Promise<void> {
+    // If animation running, force reload
+    if (this.transitions.isRunning) {
+      this.force(href);
+
+      return;
+    }
+
     let self = false;
 
     // Check prevent sameURL against current history
+    // + state check
+    // + update trigger with direction
     if (trigger === 'popstate') {
       self =
         this.history.current &&
@@ -287,6 +306,8 @@ export class Core {
       return;
     }
 
+    trigger = this.history.change(href, trigger, e);
+
     if (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -296,25 +317,24 @@ export class Core {
   }
 
   /**
-   * ### Start an "appear" transition.
+   * ### Start an "once" transition.
    *
-   * If some registered "appear" transition,
+   * If some registered "once" transition,
    * get the "resolved" transition from the store and start it.
    */
-  public async appear(): Promise<void> {
-    // Check if appear transition
-    if (this.transitions.hasAppear) {
-      try {
-        const data = this._data;
-        const transition = this.transitions.get(data, {
-          appear: true,
-        }) as ITransitionAppear;
+  public async once(readyData: ITransitionData): Promise<void> {
+    await this.hooks.do('beforeEnter', readyData);
 
-        await this.transitions.doAppear({ transition, data });
-      } catch (error) {
-        this.logger.error(error);
-      }
+    // Check if once transition
+    if (this.transitions.hasOnce) {
+      const transition = this.transitions.get(readyData, {
+        once: true,
+      }) as ITransitionOnce;
+
+      await this.transitions.doOnce({ transition, data: readyData });
     }
+
+    await this.hooks.do('afterEnter', readyData);
   }
 
   /**
@@ -335,13 +355,6 @@ export class Core {
     trigger: Trigger,
     self: boolean
   ): Promise<void> {
-    // If animation running, force reload
-    if (this.transitions.isRunning) {
-      this.force(href);
-
-      return;
-    }
-
     this.data.next.url = {
       href,
       ...this.url.parse(href),
@@ -373,7 +386,7 @@ export class Core {
 
     try {
       const transition = this.transitions.get(data, {
-        appear: false,
+        once: false,
         self,
       }) as ITransitionPage;
 
@@ -387,7 +400,14 @@ export class Core {
       this._resetData();
     } catch (error) {
       // Something went wrong (rejected promise, error, 404, 505, other…)
-      this.logger.error(error);
+      // TODO: manage / use cases for cancellation
+      // this.logger.debug('Transition cancelled');
+
+      // If transition error and no debug mode, force reload page.
+      /* istanbul ignore else */
+      if (Logger.getLevel() === 0) {
+        this.force(data.current.url.href);
+      }
     }
   }
 
@@ -483,7 +503,7 @@ export class Core {
 
     const href = this.dom.getHref(link);
 
-    if (this.prevent.checkUrl(href)) {
+    if (this.prevent.checkHref(href)) {
       return;
     }
 
@@ -520,6 +540,13 @@ export class Core {
       return;
     }
 
+    if (this.transitions.isRunning && this.preventRunning) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      return;
+    }
+
     this.go(this.dom.getHref(link), link, e);
   }
 
@@ -529,12 +556,12 @@ export class Core {
    * Get "href" from URL
    * Go for a Barba transition.
    */
-  private _onStateChange(): void {
+  private _onStateChange(e: PopStateEvent): void {
     const should = { change: true };
     this.hooks.do('stateChange', should);
 
     if (should.change) {
-      this.go(this.url.getHref(), 'popstate');
+      this.go(this.url.getHref(), 'popstate', e);
     }
   }
 

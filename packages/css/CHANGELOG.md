@@ -3,6 +3,40 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.1.15](https://github.com/barbajs/barba/compare/@barba/css@2.1.14...@barba/css@2.1.15) (2019-11-25)
+
+### Bug Fixes
+
+- **root:** :art: improve typings for TS ([48f0637](https://github.com/barbajs/barba/commit/48f0637))
+
+## [2.1.14](https://github.com/barbajs/barba/compare/@barba/css@2.1.13...@barba/css@2.1.14) (2019-11-25)
+
+**Note:** Version bump only for package @barba/css
+
+## [2.1.13](https://github.com/barbajs/barba/compare/@barba/css@2.1.12...@barba/css@2.1.13) (2019-11-06)
+
+### Bug Fixes
+
+- **core:** :ok_hand: resolve once transitions ([20cafe1](https://github.com/barbajs/barba/commit/20cafe1)), closes [#439](https://github.com/barbajs/barba/issues/439)
+
+## [2.1.12](https://github.com/barbajs/barba/compare/@barba/css@2.1.11...@barba/css@2.1.12) (2019-11-05)
+
+### Bug Fixes
+
+- **root:** :bug: fix context for views and add to transitions ([9054673](https://github.com/barbajs/barba/commit/9054673)), closes [#467](https://github.com/barbajs/barba/issues/467)
+
+## [2.1.11](https://github.com/barbajs/barba/compare/@barba/css@2.1.10...@barba/css@2.1.11) (2019-08-02)
+
+### Bug Fixes
+
+- **css:** :bug: do not trigger `enter` transition on first load ([f283cd2](https://github.com/barbajs/barba/commit/f283cd2)), closes [#393](https://github.com/barbajs/barba/issues/393)
+
+## [2.1.10](https://github.com/barbajs/barba/compare/@barba/css@2.1.9...@barba/css@2.1.10) (2019-07-16)
+
+### Bug Fixes
+
+- **root:** :mute: remove print version ([be5aa73](https://github.com/barbajs/barba/commit/be5aa73)), closes [#415](https://github.com/barbajs/barba/issues/415)
+
 ## [2.1.9](https://github.com/barbajs/barba/compare/@barba/css@2.1.8...@barba/css@2.1.9) (2019-06-11)
 
 **Note:** Version bump only for package @barba/css

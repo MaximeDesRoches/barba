@@ -7,7 +7,7 @@ import css from '../src';
 // Dom
 const wrapper = document.createElement('div');
 const current = document.createElement('div');
-const next = current.cloneNode();
+const next = document.createElement('div');
 
 wrapper.dataset.barba = 'wrapper';
 current.dataset.barba = 'container';
@@ -16,9 +16,9 @@ document.body.appendChild(wrapper);
 document.body.appendChild(current);
 
 const t = {
-  appear: () => Promise.resolve(),
   enter: () => Promise.resolve(),
   leave: () => Promise.resolve(),
+  once: () => Promise.resolve(),
 };
 const data: ITransitionData = {
   current: ({ container: current } as unknown) as ISchemaPage,
@@ -33,12 +33,12 @@ css.start = jest.fn();
 css.next = jest.fn();
 css.end = jest.fn();
 
-it('do appear hooks', async () => {
-  await barba.hooks.do('beforeAppear', data, t);
-  await barba.hooks.do('afterAppear', data, t);
+it('do once hooks', async () => {
+  await barba.hooks.do('beforeOnce', data, t);
+  await barba.hooks.do('afterOnce', data, t);
 
-  expect(css.start).toHaveBeenCalledWith(current, 'appear');
-  expect(css.end).toHaveBeenCalledWith(current, 'appear');
+  expect(css.start).toHaveBeenCalledWith(next, 'once');
+  expect(css.end).toHaveBeenCalledWith(next, 'once');
 });
 
 it('do leave hooks', async () => {
@@ -49,7 +49,18 @@ it('do leave hooks', async () => {
   expect(css.end).toHaveBeenCalledWith(current, 'leave');
 });
 
+it('do enter hooks on first load', async () => {
+  await barba.hooks.do('beforeEnter', data, t);
+  await barba.hooks.do('afterEnter', data, t);
+
+  expect(css.start).not.toHaveBeenCalled();
+  expect(css.end).not.toHaveBeenCalled();
+});
+
 it('do enter hooks', async () => {
+  // Remove from history to simulate first page load.
+  barba.history.remove();
+
   await barba.hooks.do('beforeEnter', data, t);
   await barba.hooks.do('afterEnter', data, t);
 
@@ -58,11 +69,11 @@ it('do enter hooks', async () => {
 });
 
 it('override transitions', async () => {
-  await barba.transitions.appear(data, t);
+  await barba.transitions.once(data, t);
   await barba.transitions.leave(data, t);
   await barba.transitions.enter(data, t);
 
-  expect(css.next).toHaveBeenNthCalledWith(1, current, 'appear');
+  expect(css.next).toHaveBeenNthCalledWith(1, next, 'once');
   expect(css.next).toHaveBeenNthCalledWith(2, current, 'leave');
   expect(css.next).toHaveBeenNthCalledWith(3, next, 'enter');
 });

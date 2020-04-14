@@ -8,11 +8,15 @@ import { schemaAttribute } from '../../src/schemas/attribute';
 (global as any).Headers = class {};
 
 const namespace = 'next';
+const nextUrl = 'http://localhost/foo';
 
-init();
+// Mocks
+let spyHistory: jest.SpyInstance;
 
 beforeEach(() => {
-  barba.init();
+  init();
+  // barba.init();
+
   self.fetch = jest.fn().mockImplementation(() => ({
     status: 200,
     text: () =>
@@ -27,6 +31,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   barba.destroy();
+  spyHistory && spyHistory.mockRestore();
+  (global as any).jsdom.reconfigure({ url: 'http://localhost/' });
 });
 
 it('do go', async () => {
@@ -39,6 +45,22 @@ it('do go', async () => {
     'barba',
     false
   );
+});
+
+it('force when manager running', async () => {
+  barba.force = jest.fn();
+  barba.page = jest.fn();
+  hooks.do = jest.fn();
+
+  barba.transitions.store.add('transition', { leave() {}, enter() {} });
+  barba.transitions['_running'] = true;
+  await barba.go(nextUrl, 'barba');
+
+  expect(barba.force).toHaveBeenCalledTimes(1);
+  expect(hooks.do).not.toHaveBeenCalled();
+  expect(barba.page).not.toHaveBeenCalled();
+
+  barba.transitions['_running'] = false;
 });
 
 it('prevent same url with no self transition', async () => {
@@ -62,11 +84,48 @@ it('use self transition on same url [popstate]', async () => {
   barba.page = jest.fn();
   barba.transitions.store.add('transition', { name: 'self' });
 
-  await barba.go('http://localhost/', 'popstate');
+  await barba.go('http://localhost/', 'popstate', {
+    state: {
+      index: 0,
+    },
+    stopPropagation() {},
+    preventDefault() {},
+  } as PopStateEvent);
 
   expect(barba.page).toHaveBeenCalledWith(
     'http://localhost/',
     'popstate',
     true
+  );
+});
+
+it('add history', async () => {
+  spyHistory = jest.spyOn(barba.history, 'add');
+
+  await barba.go('http://localhost/foo');
+
+  expect(barba.history.add).toHaveBeenCalledWith(
+    'http://localhost/foo',
+    'barba'
+  );
+});
+
+it('manage direction', async () => {
+  barba.page = jest.fn();
+
+  await barba.go('http://localhost/foo');
+  await barba.go('http://localhost/bar');
+  await barba.go('http://localhost/foo', 'popstate', {
+    state: {
+      index: 1,
+    },
+    stopPropagation() {},
+    preventDefault() {},
+  } as PopStateEvent);
+
+  expect(barba.page).toHaveBeenCalledWith(
+    'http://localhost/foo',
+    'back',
+    false
   );
 });

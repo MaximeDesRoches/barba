@@ -65,25 +65,29 @@ it('has current page content', () => {
     hash: undefined,
     href: 'http://localhost/',
     path: '/',
+    port: 80,
     query: {},
   });
   expect(barba.data.current.container).toBe(container);
   expect(barba.data.current.html).toMatch(/^<html>.+<\/html>$/);
 });
 
-it('updates history', () => {
+it('init history', () => {
   barba.init();
   expect(barba.history.current).toEqual({
     ns: 'ns',
+    scroll: {
+      x: 0,
+      y: 0,
+    },
     url: 'http://localhost/',
   });
-  // expect(barba.cache.has('http://localhost/')).toBeTruthy();
 });
 
-it('calls appear', () => {
-  barba.appear = jest.fn();
+it('calls once', () => {
+  barba.once = jest.fn();
   barba.init();
-  expect(barba.appear).toHaveBeenCalledTimes(1);
+  expect(barba.once).toHaveBeenCalledTimes(1);
 });
 
 it('gets wrapper', () => {

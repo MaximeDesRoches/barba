@@ -3,6 +3,32 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.1.10](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.9...@barba/prefetch@2.1.10) (2019-11-25)
+
+### Bug Fixes
+
+- **root:** :art: improve typings for TS ([48f0637](https://github.com/barbajs/barba/commit/48f0637))
+
+## [2.1.9](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.8...@barba/prefetch@2.1.9) (2019-11-25)
+
+**Note:** Version bump only for package @barba/prefetch
+
+## [2.1.8](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.7...@barba/prefetch@2.1.8) (2019-11-05)
+
+**Note:** Version bump only for package @barba/prefetch
+
+## [2.1.7](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.6...@barba/prefetch@2.1.7) (2019-10-22)
+
+### Bug Fixes
+
+- **core:** :ambulance: fix URL with query/hash ([f5e639c](https://github.com/barbajs/barba/commit/f5e639c)), closes [#445](https://github.com/barbajs/barba/issues/445)
+
+## [2.1.6](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.5...@barba/prefetch@2.1.6) (2019-07-16)
+
+### Bug Fixes
+
+- **root:** :mute: remove print version ([be5aa73](https://github.com/barbajs/barba/commit/be5aa73)), closes [#415](https://github.com/barbajs/barba/issues/415)
+
 ## [2.1.5](https://github.com/barbajs/barba/compare/@barba/prefetch@2.1.4...@barba/prefetch@2.1.5) (2019-06-26)
 
 ### Bug Fixes

@@ -11,23 +11,22 @@
 
 /***/
 
-// Third-party
-import runAsync from 'run-async';
 // Definitions
 import {
   HooksTransition,
   HooksTransitionMap,
-  ITransitionAppear,
   ITransitionData,
   ITransitionFilters,
+  ITransitionOnce,
   ITransitionPage,
   Wrapper,
 } from '../defs';
 // Hooks
 import { hooks } from '../hooks';
 // Utils
-import { helpers } from '../utils';
+import { dom, helpers, runAsync } from '../utils';
 // Modules
+import { BarbaError } from './Error';
 import { Logger } from './Logger';
 import { Store } from './Store';
 
@@ -48,7 +47,7 @@ export class Transitions {
   public get(
     data: ITransitionData,
     filters?: ITransitionFilters
-  ): ITransitionAppear | ITransitionPage {
+  ): ITransitionOnce | ITransitionPage {
     return this.store.resolve(data, filters);
   }
 
@@ -63,10 +62,10 @@ export class Transitions {
   }
 
   /**
-   * Check for registered appear transition(s).
+   * Check for registered once transition(s).
    */
-  get hasAppear(): boolean {
-    return this.store.appear.length > 0;
+  get hasOnce(): boolean {
+    return this.store.once.length > 0;
   }
 
   /**
@@ -89,31 +88,29 @@ export class Transitions {
   }
 
   /**
-   * ### Do "appear" transition.
+   * ### Do "once" transition.
    *
-   * Hooks: see [[HooksAppear]].
+   * Hooks: see [[HooksOnce]].
    */
-  public async doAppear({
+  public async doOnce({
     data,
     transition,
   }: {
     data: ITransitionData;
-    transition: ITransitionAppear;
+    transition: ITransitionOnce;
   }) {
     const t = transition || {};
     this._running = true;
 
     try {
-      await this._doAsyncHook('beforeAppear', data, t);
-      await this.appear(data, t);
-      await this._doAsyncHook('afterAppear', data, t);
+      await this._doAsyncHook('beforeOnce', data, t);
+      await this.once(data, t);
+      await this._doAsyncHook('afterOnce', data, t);
     } catch (error) {
       this._running = false;
+
+      this.logger.debug('Transition error [before/after/once]');
       this.logger.error(error);
-      // TODO: use this hooks on `cancel()`
-      // await this._doAsyncHook('appearCanceled', data, t);
-      // TODO: should I throw or should I log…
-      throw new Error('Transition error [appear]');
     }
 
     this._running = false;
@@ -183,13 +180,15 @@ export class Transitions {
           await this._doAsyncHook('afterLeave', data, t);
           await this._doAsyncHook('afterEnter', data, t);
         } catch (error) {
-          // TODO: use these hooks on `cancel()`
-          // await this._doAsyncHook('leaveCanceled', data, t);
-          // await this._doAsyncHook('enterCanceled', data, t);
-          throw new Error('Transition error [page][sync]');
+          // this.logger.debug('Transition error [sync]');
+          // this.logger.error(error);
+          if (this._isTransitionError(error)) {
+            throw new BarbaError(error, 'Transition error [sync]');
+          }
         }
       } else {
         let leaveResult: any = false;
+
         try {
           // Leave
           await this._doAsyncHook('beforeLeave', data, t);
@@ -204,9 +203,14 @@ export class Transitions {
           // TODO: check here "valid" page result
           // before going further
         } catch (error) {
-          // TODO: use this hooks on `cancel()`
-          // await this._doAsyncHook('leaveCanceled', data, t);
-          throw new Error('Transition error [page][leave]');
+          // this.logger.debug('Transition error [before/after/leave]');
+          // this.logger.error(error);
+          if (this._isTransitionError(error)) {
+            throw new BarbaError(
+              error,
+              'Transition error [before/after/leave]'
+            );
+          }
         }
 
         try {
@@ -220,39 +224,49 @@ export class Transitions {
             await this._doAsyncHook('afterEnter', data, t);
           }
         } catch (error) {
-          // TODO: use these hooks on `cancel()`
-          // await this._doAsyncHook('leaveCanceled', data, t);
-          // await this._doAsyncHook('enterCanceled', data, t);
-          throw new Error('Transition error [page][enter]');
+          // this.logger.debug('Transition error [before/after/enter]');
+          // this.logger.error(error);
+          if (this._isTransitionError(error)) {
+            throw new BarbaError(
+              error,
+              'Transition error [before/after/enter]'
+            );
+          }
         }
       }
 
-      await this._doAsyncHook('after', data, t);
-
       // Remove current contaienr
       await this.remove(data);
+
+      await this._doAsyncHook('after', data, t);
     } catch (error) {
       this._running = false;
-      // TODO: use cases for cancellation
+
+      // If "custom/specific" barba error.
+      /* istanbul ignore else */
+      if (error.name && error.name === 'BarbaError') {
+        this.logger.debug(error.label);
+        this.logger.error(error.error);
+
+        throw error;
+      }
+
+      this.logger.debug('Transition error [page]');
       this.logger.error(error);
 
-      // TODO: should I throw or should I log…
-      throw new Error('Transition error');
+      throw error;
     }
 
     this._running = false;
   }
 
   /**
-   * Appear hook + async "appear" transition.
+   * Once hook + async "once" transition.
    */
-  public async appear(
-    data: ITransitionData,
-    t: ITransitionAppear
-  ): Promise<void> {
-    await hooks.do('appear', data, t);
+  public async once(data: ITransitionData, t: ITransitionOnce): Promise<void> {
+    await hooks.do('once', data, t);
 
-    return t.appear ? runAsync(t.appear)(data) : Promise.resolve();
+    return t.once ? runAsync(t.once, t)(data) : Promise.resolve();
   }
 
   /**
@@ -261,7 +275,7 @@ export class Transitions {
   public async leave(data: ITransitionData, t: ITransitionPage): Promise<any> {
     await hooks.do('leave', data, t);
 
-    return t.leave ? runAsync(t.leave)(data) : Promise.resolve();
+    return t.leave ? runAsync(t.leave, t)(data) : Promise.resolve();
   }
 
   /**
@@ -274,14 +288,16 @@ export class Transitions {
   ): Promise<void> {
     await hooks.do('enter', data, t);
 
-    return t.enter ? runAsync(t.enter)(data, leaveResult) : Promise.resolve();
+    return t.enter
+      ? runAsync(t.enter, t)(data, leaveResult)
+      : Promise.resolve();
   }
 
   /**
    * Add next container.
    */
   public async add(data: ITransitionData, wrapper: Wrapper): Promise<void> {
-    wrapper.appendChild(data.next.container);
+    dom.addContainer(data.next.container, wrapper);
     hooks.do('nextAdded', data);
   }
 
@@ -289,12 +305,22 @@ export class Transitions {
    * Remove current container.
    */
   public async remove(data: ITransitionData): Promise<void> {
-    const { container } = data.current;
+    dom.removeContainer(data.current.container);
+    hooks.do('currentRemoved', data);
+  }
 
-    if (document.body.contains(container)) {
-      container.parentNode.removeChild(container);
-      hooks.do('currentRemoved', data);
+  private _isTransitionError(error: any) {
+    if (error.message) {
+      // Errors from request
+      return !/Timeout error|Fetch error/.test(error.message);
     }
+
+    if (error.status) {
+      // Errors from request
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -307,6 +333,6 @@ export class Transitions {
   ): Promise<void> {
     await hooks.do(hook, data, t);
 
-    return t[hook] ? runAsync(t[hook])(data) : Promise.resolve();
+    return t[hook] ? runAsync(t[hook], t)(data) : Promise.resolve();
   }
 }

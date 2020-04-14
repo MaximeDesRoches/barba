@@ -2,14 +2,18 @@
  * @module typings/core
  */
 
-import { IRouteResolved } from '@barba/router/src/defs/router';
-import { IUrlFull } from '.';
+interface IRouteResolved {
+  name: string;
+  params: any;
+}
+import { IUrlFull } from './index';
 
 export type SchemaAttributeValues =
   | 'prefix'
   | 'wrapper'
   | 'container'
   | 'prevent'
+  | 'history'
   | 'namespace';
 
 /**
@@ -19,6 +23,7 @@ export type SchemaAttributeValues =
  * @param wrapper data-prefix="__wrapper__"
  * @param container data-prefix="__container__"
  * @param prevent data-prefix-__prevent__
+ * @param history data-prefix-__history__
  * @param namespace data-prefix-__namespace__
  */
 export interface ISchemaAttribute {
@@ -26,6 +31,7 @@ export interface ISchemaAttribute {
   wrapper?: string;
   container?: string;
   prevent?: string;
+  history?: string;
   namespace?: string;
 }
 
@@ -43,9 +49,9 @@ export interface ISchemaAttribute {
  */
 
 export interface ISchemaPage {
-  container: HTMLElement | undefined;
-  html: string | undefined;
-  namespace: string | undefined;
+  container: HTMLElement;
+  html: string;
+  namespace: string;
   url: IUrlFull;
   route?: IRouteResolved | null;
 }

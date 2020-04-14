@@ -2,16 +2,17 @@ module.exports = {
   collectCoverageFrom: [
     'packages/**/src/**/*.ts',
     '!packages/**/src/**/*.d.ts',
+    '!packages/**/src/typings.ts',
     '!packages/**/src/**/index.ts',
     '!packages/**/src/polyfills/**.ts',
     '!packages/core/src/utils/helpers.ts',
   ],
   coverageThreshold: {
     global: {
-      statements: 100,
-      branches: 100,
-      functions: 100,
-      lines: 100,
+      statements: 95,
+      branches: 95,
+      functions: 95,
+      lines: 95,
     },
   },
   preset: 'ts-jest',

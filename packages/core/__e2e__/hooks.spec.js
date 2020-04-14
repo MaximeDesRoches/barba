@@ -1,11 +1,20 @@
 /* eslint-disable no-mixed-operators, cypress/no-unnecessary-waiting */
+const onceHooks = [
+  'global:beforeEnter',
+  // 'global:before',
+  // 'before',
+  'global:beforeOnce',
+  'beforeOnce',
+  'global:once',
+  'once',
+  'global:afterOnce',
+  'afterOnce',
+  // 'global:after',
+  // 'after',
+  'global:afterEnter',
+];
 const hooksDefault = [
-  'global:beforeAppear',
-  'beforeAppear',
-  'global:appear',
-  'appear',
-  'global:afterAppear',
-  'afterAppear',
+  ...onceHooks,
   'global:before',
   'before',
   'global:beforeLeave',
@@ -24,12 +33,7 @@ const hooksDefault = [
   'after',
 ];
 const hooksSync = [
-  'global:beforeAppear',
-  'beforeAppear',
-  'global:appear',
-  'appear',
-  'global:afterAppear',
-  'afterAppear',
+  ...onceHooks,
   'global:before',
   'before',
   'global:beforeLeave',
@@ -58,7 +62,7 @@ afterEach(() => {
 
 describe('Hooks', () => {
   it('have default order', () => {
-    cy.wait(1000); // Wait for appear complete
+    cy.wait(1000); // Wait for once complete
     // Click link
     cy.get('[data-test="link.hooks"]').click();
 
@@ -70,7 +74,7 @@ describe('Hooks', () => {
     });
   });
   it('have sync order', () => {
-    cy.wait(1000); // Wait for appear complete
+    cy.wait(1000); // Wait for once complete
     // Click link
     cy.get('[data-test="link.hooks-sync"]').click();
 

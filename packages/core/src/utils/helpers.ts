@@ -15,7 +15,6 @@
 import ptr from 'path-to-regexp';
 // Definitions
 import { ITransitionData } from '../defs';
-import { ISchemaPage } from '../defs/schemas';
 // Utils
 import { dom } from './dom';
 import { history } from './history';
@@ -30,7 +29,7 @@ export const update = async (
   // If not already updated
   if (!data.next.html) {
     const html = await page;
-    const { next, trigger } = data;
+    const { next } = data;
 
     if (html) {
       // see: https://github.com/barbajs/barba/issues/362
@@ -44,14 +43,8 @@ export const update = async (
       // next.html = nextDocument.innerHTML;
       next.html = html;
 
-      // Update history
-      // If triggered from an history change (back, forward),
-      // simply add the new state without
-      if (trigger === 'popstate') {
-        history.add(next.url.href, next.namespace);
-      } else {
-        history.push(next.url.href, next.namespace);
-      }
+      // Update history namespace (not available when initially set)
+      history.update({ ns: next.namespace });
 
       // Update title.
       const { title } = dom.toDocument(html);

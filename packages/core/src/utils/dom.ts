@@ -12,6 +12,8 @@
 
 /***/
 
+import path from 'path';
+
 // Definitions
 import { ISchemaAttribute, Link, Scope, Wrapper } from '../defs';
 // Schemas
@@ -83,6 +85,28 @@ export class Dom {
   }
 
   /**
+   * Remove container and store next sibling (if applicable).
+   */
+  public removeContainer(container: HTMLElement) {
+    if (document.body.contains(container)) {
+      container.parentNode.removeChild(container);
+    }
+  }
+
+  /**
+   * Add container before next sibling or at the end of the wrapper.
+   */
+  public addContainer(container: HTMLElement, wrapper: HTMLElement) {
+    const existingContainer = this.getContainer();
+
+    if (existingContainer) {
+      this._insertAfter(container, existingContainer);
+    } else {
+      wrapper.appendChild(container);
+    }
+  }
+
+  /**
    * Get `[data-barba-namespace]`.
    */
   public getNamespace(scope: Scope = document): string | null {
@@ -101,12 +125,66 @@ export class Dom {
   public getHref(el: Link): string | null {
     // HTML tagName is UPPERCASE, xhtml tagName keeps existing case.
     if (el.tagName && el.tagName.toLowerCase() === 'a') {
-      const href = el.getAttribute('href');
+      // HTMLAnchorElement, full URL available
+      if (typeof el.href === 'string') {
+        return el.href;
+      }
 
-      // When link comes from SVG, `href` returns an object, not a string.
-      return ((href as unknown) as SVGAnimatedString).baseVal || href;
+      // Probably a SVGAElement…
+      const href = el.getAttribute('href') || el.getAttribute('xlink:href');
+
+      /* istanbul ignore else */
+      if (href) {
+        // When link comes from SVG, `href` returns an object, not a string.
+        const attr: string =
+          ((href as unknown) as SVGAnimatedString).baseVal || href;
+
+        return this.resolveUrl(attr);
+      }
     }
     return null;
+  }
+
+  // Copyright 2014 Simon Lydell
+  // X11 (“MIT”) Licensed. (See LICENSE
+  // https://github.com/lydell/resolve-url/blob/master/resolve-url.js
+  /* istanbul ignore next */
+  public resolveUrl(...urls: string[]) {
+    const numUrls = urls.length;
+
+    if (numUrls === 0) {
+      throw new Error('resolveUrl requires at least one argument; got none.');
+    }
+
+    const base = document.createElement('base');
+    base.href = arguments[0];
+
+    if (numUrls === 1) {
+      return base.href;
+    }
+
+    const head = document.getElementsByTagName('head')[0];
+    head.insertBefore(base, head.firstChild);
+
+    const a = document.createElement('a');
+    let resolved;
+
+    for (let index = 1; index < numUrls; index++) {
+      a.href = arguments[index];
+      resolved = a.href;
+      base.href = resolved;
+    }
+
+    head.removeChild(base);
+
+    return resolved;
+  }
+
+  /**
+   * Insert node after another node.
+   */
+  private _insertAfter(newNode: Node, referenceNode: Node) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
   }
 }
 

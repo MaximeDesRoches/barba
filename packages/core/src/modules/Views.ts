@@ -10,19 +10,19 @@
 /***/
 
 // Definitions
-import { HooksView, IHookViewData, IView } from '../defs';
+import { HooksView, IView, IViewData } from '../defs';
 // Hooks
 import { hooks } from '../hooks';
+// Utils
+import { runAsync } from '../utils';
 // Types
-type Hook = (data: IHookViewData) => void;
+type Hook = (data: IViewData) => Promise<void>;
 
 export class Views {
   /**
    * Available hook names for views.
    */
   public names: HooksView[] = [
-    'beforeAppear',
-    'afterAppear',
     'beforeLeave',
     'afterLeave',
     'beforeEnter',
@@ -49,10 +49,8 @@ export class Views {
     });
 
     this.names.forEach(name => {
-      hooks[name](this._createHook(name), this);
+      hooks[name](this._createHook(name));
     });
-
-    hooks.ready(this._createHook('beforeEnter'), this);
   }
 
   /**
@@ -68,9 +66,11 @@ export class Views {
 
       // TODO: manage self…
       // if (view && data.trigger !== 'self') {
-      if (view) {
-        view[name] && view[name](data);
+      if (view && view[name]) {
+        return runAsync(view[name], view)(data);
       }
+
+      return Promise.resolve();
     };
   }
 }

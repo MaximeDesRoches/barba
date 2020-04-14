@@ -7,7 +7,7 @@
  * @preferred
  */
 
-import { IPrefetchOptions } from './defs/prefetch';
+import { IPrefetchOptions } from './defs';
 
 /***/
 
@@ -38,7 +38,7 @@ class Prefetch implements IBarbaPlugin<IPrefetchOptions> {
     { root = document.body, timeout = 2e3 }: IPrefetchOptions = {}
   ) {
     this.logger = new barba.Logger(this.name);
-    this.logger.print(this.version);
+    this.logger.info(this.version);
     this.barba = barba;
     this.root = root;
     this.timeout = timeout;
@@ -114,7 +114,7 @@ class Prefetch implements IBarbaPlugin<IPrefetchOptions> {
 
           if (
             !this.barba.cache.has(href) &&
-            !this.barba.prevent.checkUrl(href) &&
+            !this.barba.prevent.checkHref(href) &&
             !this.barba.prevent.checkLink(link, {} as Event, href)
           ) {
             this.observer.observe(el);

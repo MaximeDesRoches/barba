@@ -53,7 +53,8 @@
         "doc",
         "question",
         "test",
-        "review"
+        "review",
+        "bug"
       ]
     },
     {
@@ -650,6 +651,61 @@
       "profile": "http://liroopierre.com",
       "contributions": [
         "code"
+      ]
+    },
+    {
+      "login": "lmartins",
+      "name": "Luis Martins",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/151981?v=4",
+      "profile": "https://github.com/lmartins",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "matthewjumpsoffbuildings",
+      "name": "Matthew",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/41524?v=4",
+      "profile": "https://arraytheband.com.au",
+      "contributions": [
+        "ideas",
+        "question"
+      ]
+    },
+    {
+      "login": "Slgoetz",
+      "name": "Simon Goetz",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/393000?v=4",
+      "profile": "http://slgoetz.com",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "luis-pt",
+      "name": "Luís Carvalho",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/14956453?v=4",
+      "profile": "https://luis.pt",
+      "contributions": [
+        "question"
+      ]
+    },
+    {
+      "login": "Eruvarn",
+      "name": "Eruvarn",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/28648465?v=4",
+      "profile": "https://github.com/Eruvarn",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "mrsamse",
+      "name": "Samuel Berisha",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/20925205?v=4",
+      "profile": "https://github.com/mrsamse",
+      "contributions": [
+        "question"
       ]
     }
   ]

@@ -35,8 +35,15 @@ it('deletes ', () => {
 });
 
 it('checks url ', () => {
-  cache.checkUrl = jest.fn();
-  cache.set(key, request, action);
+  cache.checkHref = jest.fn();
+  cache.has(key);
 
-  expect(cache.checkUrl).toHaveBeenCalled();
+  expect(cache.checkHref).toHaveBeenCalled();
+});
+
+it('uses cacheIgnore ', () => {
+  cache.checkHref = jest.fn().mockImplementation(() => true);
+  const res = cache.has(key);
+
+  expect(res).toBeFalsy();
 });

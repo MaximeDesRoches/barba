@@ -19,7 +19,7 @@ import { Core } from '@barba/core/src/core';
 import { Logger } from '@barba/core/src/modules/Logger';
 // Local
 import { version } from '../package.json';
-import { IRouteByName, IRouteResolved, IRouterOptions } from './defs/router';
+import { IRouteByName, IRouteResolved, IRouterOptions } from './defs';
 
 class Router implements IBarbaPlugin<IRouterOptions> {
   public name = '@barba/router';
@@ -35,7 +35,7 @@ class Router implements IBarbaPlugin<IRouterOptions> {
    */
   public install(barba: Core, { routes = [] }: IRouterOptions = {}) {
     this.logger = new barba.Logger(this.name);
-    this.logger.print(this.version);
+    this.logger.info(this.version);
     this.barba = barba;
 
     routes.forEach(route => {
