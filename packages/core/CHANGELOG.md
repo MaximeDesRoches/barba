@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.9.8](https://github.com/barbajs/barba/compare/@barba/core@2.9.7...@barba/core@2.9.8) (2020-04-14)
+
+**Note:** Version bump only for package @barba/core
+
+
+
+
+
 ## [2.9.7](https://github.com/barbajs/barba/compare/@barba/core@2.9.6...@barba/core@2.9.7) (2020-01-16)
 
 ### Bug Fixes
